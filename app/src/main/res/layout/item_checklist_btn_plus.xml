@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/layout_button_plus"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="4dp"
+    android:orientation="vertical">
+
+    <ImageButton
+        android:id="@+id/buttonPlus"
+        android:layout_width="31dp"
+        android:layout_height="31dp"
+        android:layout_marginStart="24.5dp"
+        android:layout_marginTop="4dp"
+        android:layout_marginBottom="16dp"
+        android:background="@android:color/transparent"
+        android:scaleType="centerCrop"
+        android:src="@drawable/iconplus" />
+</LinearLayout>

@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id = "@+id/nav_multiline"
+        android:icon="@drawable/iconmultiline"
+        android:title="multiline"></item>
+    <item
+        android:id = "@+id/nav_checklist"
+        android:icon="@drawable/iconchecklist"
+        android:title="checklist"></item>
+    <!--<item
+        android:id = "@+id/nav_timetable"
+        android:icon="@drawable/icontimetable"
+        android:title="timetable"></item>
+    <item
+        android:id = "@+id/nav_mindmap"
+        android:icon="@drawable/iconmindmap"
+        android:title="mindmap"></item>
+    <item
+        android:id = "@+id/nav_pinboard"
+        android:icon="@drawable/iconpinboard"
+        android:title="pinboard"></item>-->
+</menu>
