@@ -1,5 +1,7 @@
 package com.example.mynotepad;
 
+import android.app.Activity;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.GestureDetector;
@@ -7,6 +9,8 @@ import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.ScaleGestureDetector;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
@@ -39,10 +43,11 @@ import androidx.fragment.app.Fragment;
 
 public class MainActivity extends AppCompatActivity {
 
-    Fragment selectedFragment, selectedTopFragment;
+    Fragment selectedFragment, selectedTopFragment, selectedBottomFragment;
     MultilineFragment multiline;
     CheckListFragment checkList;
     FolderFragment folderFragment;
+    VoiceFragment voiceFragment;
 
     private final String pref_filename = "user_settings",
             key_size_factor = "scale_factor",
@@ -55,8 +60,10 @@ public class MainActivity extends AppCompatActivity {
     public static float mScaleFactor;
 
     //константы для пустого окна и активности с кнопками "сохранить" и "папка"
-    public static final EmptyFragment EMPTY_FRAGMENT = new EmptyFragment();
+    public static final EmptyFragment TOP_EMPTY_FRAGMENT = new EmptyFragment();
+    public static final EmptyFragment BOTTOM_EMPTY_FRAGMENT = new EmptyFragment();
     public static final TopLayoutFragment TOP_LAYOUT_FRAGMENT = new TopLayoutFragment();
+    public static final VoiceFragment VOICE_FRAGMENT = new VoiceFragment();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -66,38 +73,60 @@ public class MainActivity extends AppCompatActivity {
 
         //сначала инициализация bottom navigation
         BottomNavigationView bottomNav = binding.bottomNavigation;
-        bottomNav.setOnNavigationItemSelectedListener(navListener);
+        bottomNav.setOnItemSelectedListener(navListener);
 
         if (savedInstanceState != null) {
-            if (savedInstanceState.containsKey("multiline")) {
-                selectedTopFragment = TOP_LAYOUT_FRAGMENT;
-                getSupportFragmentManager().beginTransaction().replace(R.id.fragmentTopPlace, selectedTopFragment).commit();
-                multiline = new MultilineFragment((MultilineText) Objects.requireNonNull(savedInstanceState.getSerializable("multiline")));
-                selectedFragment = multiline;
-            } else if (savedInstanceState.containsKey("checklist")) {
-                //на экране появляется topLayout
-                selectedTopFragment = TOP_LAYOUT_FRAGMENT;
-                getSupportFragmentManager().beginTransaction().replace(R.id.fragmentTopPlace, selectedTopFragment).commit();
-                checkList = new CheckListFragment((CheckListText) Objects.requireNonNull(savedInstanceState.getSerializable("checklist")));
-                selectedFragment = checkList;
-            } else if (savedInstanceState.containsKey("folder")) {
-                selectedTopFragment = EMPTY_FRAGMENT;
-                getSupportFragmentManager().beginTransaction().replace(R.id.fragmentTopPlace, selectedTopFragment).commit();
+            if (savedInstanceState.containsKey("folder")) {
+                selectedTopFragment = TOP_EMPTY_FRAGMENT;
+                selectedBottomFragment = BOTTOM_EMPTY_FRAGMENT;
                 folderFragment = new FolderFragment();
                 selectedFragment = folderFragment;
+                // organize with code block
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.fragmentTopPlace, selectedTopFragment)
+                        .replace(R.id.fragmentBottomPlace, selectedBottomFragment)
+                        .replace(R.id.fragmentPlace, selectedFragment)
+                        .commit();
+                hideKeyboard();
+            } else {
+                selectedTopFragment = TOP_LAYOUT_FRAGMENT;
+                selectedBottomFragment = VOICE_FRAGMENT;
+                if (savedInstanceState.containsKey("multiline")) {
+                    multiline = new MultilineFragment((MultilineText) Objects.requireNonNull(savedInstanceState.getSerializable("multiline")));
+                    selectedFragment = multiline;
+                    getSupportFragmentManager().beginTransaction()
+                            .replace(R.id.fragmentTopPlace, selectedTopFragment)
+                            .replace(R.id.fragmentBottomPlace, selectedBottomFragment)
+                            .replace(R.id.fragmentPlace, selectedFragment)
+                            .commit();
+                    showKeyboard();
+                } else if (savedInstanceState.containsKey("checklist")) {
+                    checkList = new CheckListFragment((CheckListText) Objects.requireNonNull(savedInstanceState.getSerializable("checklist")));
+                    selectedFragment = checkList;
+                    getSupportFragmentManager().beginTransaction()
+                            .replace(R.id.fragmentTopPlace, selectedTopFragment)
+                            .replace(R.id.fragmentBottomPlace, selectedBottomFragment)
+                            .replace(R.id.fragmentPlace, selectedFragment)
+                            .commit();
+                    showKeyboard();
+                }
             }
-        } else {
+        } else{
             /*selectedTopFragment = EMPTY_FRAGMENT;
             getSupportFragmentManager().beginTransaction().replace(R.id.fragmentTopPlace, selectedTopFragment).commit();
             folderFragment = new FolderFragment();
             selectedFragment = folderFragment;*/
             selectedTopFragment = TOP_LAYOUT_FRAGMENT;
-            getSupportFragmentManager().beginTransaction().replace(R.id.fragmentTopPlace, selectedTopFragment).commit();
+            selectedBottomFragment = VOICE_FRAGMENT;
             checkList = new CheckListFragment();
             selectedFragment = checkList;
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fragmentTopPlace, selectedTopFragment)
+                    .replace(R.id.fragmentBottomPlace, selectedBottomFragment)
+                    .replace(R.id.fragmentPlace, selectedFragment)
+                    .commit();
+            showKeyboard();
         }
-
-        getSupportFragmentManager().beginTransaction().replace(R.id.fragmentPlace, selectedFragment).commit();
 
         preferences = getSharedPreferences(pref_filename, MODE_PRIVATE);
         mScaleFactor = preferences.getFloat(key_size_factor, 1.f);
@@ -129,6 +158,18 @@ public class MainActivity extends AppCompatActivity {
             getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         }*/
     }
+
+    /*@Override
+    protected void onStart() {
+        super.onStart();
+        if (selectedFragment == checkList && checkList.datetime.equals("")) {
+            showKeyboard();
+        } else {
+            View view = getCurrentFocus();
+            if (view != null)
+                view.clearFocus();
+        }
+    }*/
 
     /*@Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
@@ -171,14 +212,17 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private BottomNavigationView.OnNavigationItemSelectedListener navListener = this::onNavigationItemSelected;
+    private final BottomNavigationView.OnItemSelectedListener navListener = this::onNavigationItemSelected;
 
     private boolean onNavigationItemSelected(MenuItem menuItem) {
 
         //для сохранения заметки нужен layout с соответствующей кнопкой
-        if (selectedTopFragment.equals(EMPTY_FRAGMENT)) {
+        if (selectedTopFragment.equals(TOP_EMPTY_FRAGMENT)) {
             selectedTopFragment = TOP_LAYOUT_FRAGMENT;
-            getSupportFragmentManager().beginTransaction().replace(R.id.fragmentTopPlace, selectedTopFragment).commit();
+        }
+
+        if (selectedBottomFragment.equals(BOTTOM_EMPTY_FRAGMENT)) {
+            selectedBottomFragment = VOICE_FRAGMENT;
         }
 
         switch (menuItem.getItemId()) {
@@ -186,20 +230,38 @@ public class MainActivity extends AppCompatActivity {
                 save();
                 multiline = new MultilineFragment();
                 selectedFragment = multiline;
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.fragmentTopPlace, selectedTopFragment)
+                        .replace(R.id.fragmentBottomPlace, selectedBottomFragment)
+                        .replace(R.id.fragmentPlace, selectedFragment)
+                        .commit();
                 break;
             case R.id.nav_checklist:
                 save();
                 checkList = new CheckListFragment();
                 selectedFragment = checkList;
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.fragmentTopPlace, selectedTopFragment)
+                        .replace(R.id.fragmentBottomPlace, selectedBottomFragment)
+                        .replace(R.id.fragmentPlace, selectedFragment)
+                        .commit();
+                //checkList.setCursor(checkList.Notes.size() - 2);
                 break;
             default:
                 save();
+                menuItem.setShowAsAction(R.id.nav_checklist);
                 checkList = new CheckListFragment();
                 selectedFragment = checkList;
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.fragmentTopPlace, selectedTopFragment)
+                        .replace(R.id.fragmentBottomPlace, selectedBottomFragment)
+                        .replace(R.id.fragmentPlace, selectedFragment)
+                        .commit();
+                //checkList.setCursor(checkList.Notes.size() - 2);
                 break;
         }
-        getSupportFragmentManager().beginTransaction().replace(R.id.fragmentPlace,
-                selectedFragment).commit();
+        showKeyboard();
+        showKeyboard();
         return true;
     }
 
@@ -247,12 +309,40 @@ public class MainActivity extends AppCompatActivity {
     public void onButtonFolderClick(View view) {
         //ёбаные костыли
         save();
-        selectedTopFragment = EMPTY_FRAGMENT;
-        getSupportFragmentManager().beginTransaction().replace(R.id.fragmentTopPlace, selectedTopFragment).commit();
+        hideKeyboard();
+        selectedTopFragment = TOP_EMPTY_FRAGMENT;
+        selectedBottomFragment = BOTTOM_EMPTY_FRAGMENT;
         folderFragment = new FolderFragment();
         selectedFragment = folderFragment;
-        getSupportFragmentManager().beginTransaction().replace(R.id.fragmentPlace,
-                selectedFragment).commit();
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.fragmentTopPlace, selectedTopFragment)
+                .replace(R.id.fragmentBottomPlace, selectedBottomFragment)
+                .replace(R.id.fragmentPlace, selectedFragment)
+                .commit();
+    }
+
+    public void onButtonPrevClick(View view) {
+        if (selectedFragment == checkList) {
+            checkList.prev();
+        } else if (selectedFragment == multiline) {
+            multiline.prev();
+        }
+    }
+
+    public void onButtonStartStopClick(View view) {
+        if (selectedFragment == checkList) {
+            checkList.startStop();
+        } else if (selectedFragment == multiline) {
+            multiline.startStop();
+        }
+    }
+
+    public void onButtonNextClick(View view) {
+        if (selectedFragment == checkList) {
+            checkList.next();
+        } else if (selectedFragment == multiline) {
+            multiline.next();
+        }
     }
 
     public static String getCurrentDate() {
@@ -265,20 +355,49 @@ public class MainActivity extends AppCompatActivity {
 
     public void updateMultiline(MultilineText multilineText) {
         selectedTopFragment = TOP_LAYOUT_FRAGMENT;
-        getSupportFragmentManager().beginTransaction().replace(R.id.fragmentTopPlace, selectedTopFragment).commit();
+        selectedBottomFragment = VOICE_FRAGMENT;
         multiline = new MultilineFragment(multilineText);
         selectedFragment = multiline;
-        getSupportFragmentManager().beginTransaction().replace(R.id.fragmentPlace,
-                selectedFragment).commit();
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.fragmentTopPlace, selectedTopFragment)
+                .replace(R.id.fragmentBottomPlace, selectedBottomFragment)
+                .replace(R.id.fragmentPlace, selectedFragment)
+                .commit();
+        hideKeyboard();
+        View view = getCurrentFocus();
+        if (view != null)
+            view.clearFocus();
     }
 
     public void updateCheckList(CheckListText checkListText) {
         selectedTopFragment = TOP_LAYOUT_FRAGMENT;
-        getSupportFragmentManager().beginTransaction().replace(R.id.fragmentTopPlace, selectedTopFragment).commit();
+        selectedBottomFragment = VOICE_FRAGMENT;
         checkList = new CheckListFragment(checkListText);
         selectedFragment = checkList;
-        getSupportFragmentManager().beginTransaction().replace(R.id.fragmentPlace,
-                selectedFragment).commit();
+        getSupportFragmentManager().beginTransaction()
+                .replace(R.id.fragmentTopPlace, selectedTopFragment)
+                .replace(R.id.fragmentBottomPlace, selectedBottomFragment)
+                .replace(R.id.fragmentPlace, selectedFragment)
+                .commit();
+        hideKeyboard();
+        View view = getCurrentFocus();
+        if (view != null)
+            view.clearFocus();
+    }
+
+    public void showKeyboard() {
+        ((InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE)).toggleSoftInput(
+                InputMethodManager.SHOW_FORCED,
+                InputMethodManager.HIDE_IMPLICIT_ONLY
+        );
+    }
+
+    public void hideKeyboard() {
+        View view = getCurrentFocus();
+        if (view != null) {
+            InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Activity.INPUT_METHOD_SERVICE);
+            inputMethodManager.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), 0);
+        }
     }
 
     @Override

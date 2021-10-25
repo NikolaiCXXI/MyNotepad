@@ -1,9 +1,12 @@
 package com.example.mynotepad.checklist;
 
+import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
+import android.widget.EditText;
 import android.widget.ImageButton;
 
 import com.example.mynotepad.MainActivity;
@@ -29,6 +32,7 @@ public class CheckNotesAdapter extends ListAdapter<CheckListFragment, RecyclerVi
     //пригодный для сериализации List, содержащий Title, Note1..n, ButtonPlus
     List<RowType> data;
     private CheckListFragment checkList;
+    public int clickedPosition;
 
     CheckNotesAdapter(List<RowType> data, CheckListFragment checkList) {
         super(CheckListFragment.DIFF_CALLBACK);
@@ -47,15 +51,16 @@ public class CheckNotesAdapter extends ListAdapter<CheckListFragment, RecyclerVi
         else return -1;
     }
 
-    private View.OnClickListener getOnClickListener() {
+    private View.OnClickListener btnPlusClickListener() {
         return v -> checkList.addCheckNote();
     }
 
-    private final View.OnFocusChangeListener getFocusListener = (view, b) -> {
+
+    /*private final View.OnFocusChangeListener getFocusListener = (view, b) -> {
         if (b) {
             checkList.addCheckNote();
         }
-    };
+    };*/
 
     @NonNull
     @Override
@@ -82,15 +87,25 @@ public class CheckNotesAdapter extends ListAdapter<CheckListFragment, RecyclerVi
         switch (k) {
             case RowType.TITLE_ROW_TYPE:
                 ((TitleViewHolder) holder).bind((TitleCheckNotes) data.get(position));
+                ((TitleViewHolder) holder).titleChecklistBinding.titleTextCheckList.setOnClickListener(view -> clickedPosition = position);
                 break;
             case RowType.CHECKLIST_ROW_TYPE:
                 ((CheckListViewHolder) holder).bind((CheckListItem) data.get(position));
-                /*if (position == data.size() - 2)
-                    ((CheckListViewHolder) holder).checkListItemBinding.noteCheckList.setOnFocusChangeListener(getFocusListener);*/
+                ((CheckListViewHolder) holder).checkListItemBinding.noteCheckList.setOnClickListener(view -> clickedPosition = position);
+                ((CheckListViewHolder) holder).checkListItemBinding.checkBoxItem.setOnClickListener(view -> clickedPosition = position);
+                if ((position == 1
+                        || position == checkList.Notes.size() - 2)
+                        && ((CheckListViewHolder) holder).checkListItemBinding.noteCheckList.getText().toString().equals("")
+                        && !((CheckListViewHolder) holder).checkListItemBinding.checkBoxItem.isChecked()
+                ) {
+                    ((CheckListViewHolder) holder).setCursor();
+                    checkList.showKeyBoard();
+                    clickedPosition = position;
+                }
                 break;
             case RowType.BUTTON_PLUS_ROW_TYPE:
                 //чзх
-                ((ButtonViewHolder) holder).button.setOnClickListener(getOnClickListener());
+                ((ButtonViewHolder) holder).button.setOnClickListener(btnPlusClickListener());
                 break;
         }
     }
@@ -101,7 +116,7 @@ public class CheckNotesAdapter extends ListAdapter<CheckListFragment, RecyclerVi
     }
 
 
-    public static class TitleViewHolder extends RecyclerView.ViewHolder {
+    public static class TitleViewHolder extends RecyclerView.ViewHolder{
         ItemChecklistTitleBinding titleChecklistBinding;
 
         public TitleViewHolder(ItemChecklistTitleBinding titleChecklistBinding) {
@@ -114,6 +129,7 @@ public class CheckNotesAdapter extends ListAdapter<CheckListFragment, RecyclerVi
             titleChecklistBinding.titleTextCheckList.setTextSize(Math.round(MainActivity.mScaleFactor * 52));
             titleChecklistBinding.executePendingBindings();
         }
+
     }
 
     public static class ButtonViewHolder extends RecyclerView.ViewHolder {
@@ -132,12 +148,18 @@ public class CheckNotesAdapter extends ListAdapter<CheckListFragment, RecyclerVi
         public CheckListViewHolder(ItemChecklistNoteBinding checkListItemBinding) {
             super(checkListItemBinding.getRoot());
             this.checkListItemBinding = checkListItemBinding;
+            //setCursor();
         }
 
         public void bind(CheckListItem checkListItem) {
             checkListItemBinding.setCheckListItem(checkListItem);
             checkListItemBinding.noteCheckList.setTextSize(Math.round(MainActivity.mScaleFactor * 39));
             checkListItemBinding.executePendingBindings();
+        }
+        public void setCursor() {
+            EditText noteCheckList = this.checkListItemBinding.noteCheckList;
+            noteCheckList.requestFocus();
+            noteCheckList.setSelection(noteCheckList.getText().length());
         }
     }
 }

@@ -31,9 +31,9 @@
             android:hint="@string/hint_note"
             android:inputType="textMultiLine"
             android:text="@={checkListItem.noteText}"
+            android:selection="@{checkListItem.noteText.length()}"
             android:textSize="18sp">
 
-            <requestFocus />
         </EditText>
     </LinearLayout>
 </layout>
