@@ -1,6 +1,7 @@
 package com.example.mynotepad.multiline;
 
 import android.app.Activity;
+import android.app.Instrumentation;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
@@ -19,6 +20,7 @@ import com.example.mynotepad.databinding.FragmentMultilineBinding;
 import java.util.List;
 import java.util.Objects;
 
+import androidx.activity.result.ActivityResult;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
@@ -90,13 +92,13 @@ public class MultilineFragment extends Fragment {
         noteText.setSelection(noteText.getText().length());
     }
 
-    public void startStop() {
+    /*//public void startStop() {
         displaySpeechRecognizer();
-    }
+    }*/
 
-    private static final int SPEECH_REQUEST_CODE = 0;
+    //private static final int SPEECH_REQUEST_CODE = 0;
 
-    // Create an intent that can start the Speech Recognizer activity
+    /*// Create an intent that can start the Speech Recognizer activity
     private void displaySpeechRecognizer() {
         Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
         intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
@@ -122,6 +124,20 @@ public class MultilineFragment extends Fragment {
             }
         }
         super.onActivityResult(requestCode, resultCode, data);
+    }*/
+
+    public void voiceInput(ActivityResult result) {
+        if (result.getResultCode() == RESULT_OK) {
+            List<String> results = result.getData().getStringArrayListExtra(
+                    RecognizerIntent.EXTRA_RESULTS);
+            String spokenText = results.get(0);
+
+            if (titleText.hasFocus()) {
+                titleText.append(spokenText);
+            } else {
+                noteText.append(spokenText);
+            }
+        }
     }
 
     /*@Override

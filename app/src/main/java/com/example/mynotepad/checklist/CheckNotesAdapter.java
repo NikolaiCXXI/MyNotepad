@@ -87,12 +87,18 @@ public class CheckNotesAdapter extends ListAdapter<CheckListFragment, RecyclerVi
         switch (k) {
             case RowType.TITLE_ROW_TYPE:
                 ((TitleViewHolder) holder).bind((TitleCheckNotes) data.get(position));
-                ((TitleViewHolder) holder).titleChecklistBinding.titleTextCheckList.setOnClickListener(view -> clickedPosition = position);
+                ((TitleViewHolder) holder).titleChecklistBinding.titleTextCheckList.setOnFocusChangeListener((view, b) -> {
+                    if (view.hasFocus())
+                        clickedPosition = position;
+                });
                 break;
             case RowType.CHECKLIST_ROW_TYPE:
                 ((CheckListViewHolder) holder).bind((CheckListItem) data.get(position));
-                ((CheckListViewHolder) holder).checkListItemBinding.noteCheckList.setOnClickListener(view -> clickedPosition = position);
-                ((CheckListViewHolder) holder).checkListItemBinding.checkBoxItem.setOnClickListener(view -> clickedPosition = position);
+                ((CheckListViewHolder) holder).checkListItemBinding.noteCheckList.setOnFocusChangeListener((view, b) -> {
+                    if (view.hasFocus())
+                        clickedPosition = position;
+                });
+                ((CheckListViewHolder) holder).checkListItemBinding.checkBoxItem.setOnClickListener((view) -> clickedPosition = position);
                 if ((position == 1
                         || position == checkList.Notes.size() - 2)
                         && ((CheckListViewHolder) holder).checkListItemBinding.noteCheckList.getText().toString().equals("")

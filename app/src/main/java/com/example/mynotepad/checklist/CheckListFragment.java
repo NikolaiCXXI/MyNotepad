@@ -35,6 +35,10 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
@@ -237,21 +241,25 @@ public class CheckListFragment extends Fragment implements RecyclerViewClickList
         if (position != 0) {
             if (position < 0) {
                 position = Notes.size() - 2;
+                notesList.scrollToPosition(position);
                 EditText noteCheckList = ((CheckNotesAdapter.CheckListViewHolder) Objects.requireNonNull(notesList.findViewHolderForAdapterPosition(position))).checkListItemBinding.noteCheckList;
                 noteCheckList.requestFocus();
                 noteCheckList.setSelection(noteCheckList.getText().length());
             }
             else if (position >= Notes.size() - 1) {
+                notesList.scrollToPosition(position - 1);
                 addCheckNote();
                 EditText noteCheckList = ((CheckNotesAdapter.CheckListViewHolder) Objects.requireNonNull(notesList.findViewHolderForAdapterPosition(position - 1))).checkListItemBinding.noteCheckList;
                 noteCheckList.requestFocus();
                 noteCheckList.setSelection(noteCheckList.getText().length());
             } else if (position <= Notes.size() - 2) {
+                notesList.scrollToPosition(position);
                 EditText noteCheckList = ((CheckNotesAdapter.CheckListViewHolder) Objects.requireNonNull(notesList.findViewHolderForAdapterPosition(position))).checkListItemBinding.noteCheckList;
                 noteCheckList.requestFocus();
                 noteCheckList.setSelection(noteCheckList.getText().length());
             }
         } else {
+            notesList.scrollToPosition(position);
             EditText titleText = ((CheckNotesAdapter.TitleViewHolder) Objects.requireNonNull(notesList.findViewHolderForAdapterPosition(position))).titleChecklistBinding.titleTextCheckList;
             titleText.requestFocus();
             titleText.setSelection(titleText.getText().length());
@@ -277,28 +285,9 @@ public class CheckListFragment extends Fragment implements RecyclerViewClickList
         }
     }
 
-    public void startStop() {
-        displaySpeechRecognizer();
-    }
-
-    private static final int SPEECH_REQUEST_CODE = 0;
-
-    // Create an intent that can start the Speech Recognizer activity
-    private void displaySpeechRecognizer() {
-        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
-        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
-                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-// This starts the activity and populates the intent with the speech text.
-        startActivityForResult(intent, SPEECH_REQUEST_CODE);
-    }
-
-    // This callback is invoked when the Speech Recognizer returns.
-// This is where you process the intent and extract the speech text from the intent.
-    @Override
-    public void onActivityResult(int requestCode, int resultCode,
-                                 Intent data) {
-        if (requestCode == SPEECH_REQUEST_CODE && resultCode == RESULT_OK) {
-            List<String> results = data.getStringArrayListExtra(
+    public void voiceInput(ActivityResult result) {
+        if (result.getResultCode() == RESULT_OK) {
+            List<String> results = result.getData().getStringArrayListExtra(
                     RecognizerIntent.EXTRA_RESULTS);
             String spokenText = results.get(0);
 
@@ -316,9 +305,7 @@ public class CheckListFragment extends Fragment implements RecyclerViewClickList
                     break;
             }
         }
-        super.onActivityResult(requestCode, resultCode, data);
     }
-
 
     void addCheckNote() {
         checkListItem = new CheckListItem();

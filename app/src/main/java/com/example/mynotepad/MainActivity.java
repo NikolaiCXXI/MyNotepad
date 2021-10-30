@@ -2,8 +2,10 @@ package com.example.mynotepad;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.speech.RecognizerIntent;
 import android.view.GestureDetector;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -37,6 +39,10 @@ import java.util.Locale;
 import java.util.Objects;
 import java.util.TimeZone;
 
+import androidx.activity.result.ActivityResult;
+import androidx.activity.result.ActivityResultCallback;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
@@ -322,18 +328,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void onButtonPrevClick(View view) {
+
         if (selectedFragment == checkList) {
             checkList.prev();
         } else if (selectedFragment == multiline) {
             multiline.prev();
-        }
-    }
-
-    public void onButtonStartStopClick(View view) {
-        if (selectedFragment == checkList) {
-            checkList.startStop();
-        } else if (selectedFragment == multiline) {
-            multiline.startStop();
         }
     }
 
@@ -344,6 +343,30 @@ public class MainActivity extends AppCompatActivity {
             multiline.next();
         }
     }
+
+    public void onButtonStartStopClick(View view) {
+        displaySpeechRecognizer();
+    }
+
+    private void displaySpeechRecognizer() {
+        Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL,
+                RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+        intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ru-RU");
+        mStartForResult.launch(intent);
+    }
+
+    ActivityResultLauncher<Intent> mStartForResult = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(),
+            new ActivityResultCallback<ActivityResult>() {
+                @Override
+                public void onActivityResult(ActivityResult result) {
+                    if (selectedFragment == checkList) {
+                        checkList.voiceInput(result);
+                    } else if (selectedFragment == multiline) {
+                        multiline.voiceInput(result);
+                    }
+                }
+            });
 
     public static String getCurrentDate() {
         SimpleDateFormat dateFormat = new SimpleDateFormat("dd-MM-yy HH:mm:ss", Locale.ROOT);
