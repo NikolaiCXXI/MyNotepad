@@ -38,6 +38,7 @@ public class FolderFragment extends Fragment implements FolderItemsAdapter.OnFol
     public List<FolderItem> folders = new ArrayList<>();
     private FolderItem item;
     private FolderItemsAdapter adapter;
+    public int position = 0;
     //так и не пригодился, но пусть будет
     private FolderDiffUtil foldersDiffUtil;
 
@@ -111,13 +112,13 @@ public class FolderFragment extends Fragment implements FolderItemsAdapter.OnFol
             MultilineDao multilineDao = db.multilineDao();
             MultilineText multilineText = multilineDao.getById(item.id_db);
             //ёбаный пиздец
-            ((MainActivity) requireActivity()).updateMultiline(multilineText);
+            ((MainActivity) requireActivity()).updateMultiline(multilineText, position);
         } else if (item.id_image == R.drawable.iconfolderchecklist) {
             AppDatabase db = App.getInstance().getDatabase();
             CheckListDao checkListDao = db.checkListDao();
             CheckListText checkListText = checkListDao.getById(item.id_db);
             //ёбаный пиздец
-            ((MainActivity) requireActivity()).updateCheckList(checkListText);
+            ((MainActivity) requireActivity()).updateCheckList(checkListText, position);
         }
     }
 

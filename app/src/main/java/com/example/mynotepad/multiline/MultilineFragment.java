@@ -40,6 +40,7 @@ public class MultilineFragment extends Fragment {
 
     public EditText titleText, noteText;
     public long id_db;
+    public int position = 0;
     //чзх?
     String titleString, noteString;
     public String datetime;

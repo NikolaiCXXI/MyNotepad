@@ -77,6 +77,7 @@ public class CheckListFragment extends Fragment implements RecyclerViewClickList
     private CheckListDIffUtil checkListDIffUtil;
     private int clickedPosition;
     public long id_db;
+    public int position = 0;
 
     //конструктор воссоздаёт объект checkList по его данным из checklisttext
     public CheckListFragment(CheckListText checkListText) {

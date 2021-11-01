@@ -146,7 +146,8 @@ public class MainActivity extends AppCompatActivity {
 
             preferences = getSharedPreferences(pref_filename, MODE_PRIVATE);
             SharedPreferences.Editor editor = preferences.edit();
-            if (preferences.getInt("folder", 3) == 2) {
+            int _folder = preferences.getInt("__folder", -1);
+            if (_folder == -2) {
                 selectedTopFragment = TOP_EMPTY_FRAGMENT;
                 selectedBottomFragment = BOTTOM_EMPTY_FRAGMENT;
                 folderFragment = new FolderFragment();
@@ -158,21 +159,21 @@ public class MainActivity extends AppCompatActivity {
                         .replace(R.id.fragmentPlace, selectedFragment)
                         .commit();
                 hideKeyboard();
-            } else if (preferences.getInt("folder", 3) == 1) {
+            } else if (_folder >= 0) {
                 folderFragment = new FolderFragment();
-                FolderItem item = folderFragment.folders.get(0);
+                FolderItem item = folderFragment.folders.get(_folder);
                 if (item.id_image == R.drawable.iconfoldermultiline) {
                     AppDatabase db = App.getInstance().getDatabase();
                     MultilineDao multilineDao = db.multilineDao();
                     MultilineText multilineText = multilineDao.getById(item.id_db);
-                    updateMultiline(multilineText);
+                    updateMultiline(multilineText, _folder);
                 } else if (item.id_image == R.drawable.iconfolderchecklist) {
                     AppDatabase db = App.getInstance().getDatabase();
                     CheckListDao checkListDao = db.checkListDao();
                     CheckListText checkListText = checkListDao.getById(item.id_db);
-                    updateCheckList(checkListText);
+                    updateCheckList(checkListText, _folder);
                 }
-            } else if (preferences.getInt("folder", 3) == 3) {
+            } else if (_folder == -1) {
                 selectedTopFragment = TOP_LAYOUT_FRAGMENT;
                 selectedBottomFragment = VOICE_FRAGMENT;
                 checkList = new CheckListFragment();
@@ -183,8 +184,19 @@ public class MainActivity extends AppCompatActivity {
                         .replace(R.id.fragmentPlace, selectedFragment)
                         .commit();
                 showKeyboard();
+                /*selectedTopFragment = TOP_EMPTY_FRAGMENT;
+                selectedBottomFragment = BOTTOM_EMPTY_FRAGMENT;
+                folderFragment = new FolderFragment();
+                selectedFragment = folderFragment;
+                // organize with code block
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.fragmentTopPlace, selectedTopFragment)
+                        .replace(R.id.fragmentBottomPlace, selectedBottomFragment)
+                        .replace(R.id.fragmentPlace, selectedFragment)
+                        .commit();
+                hideKeyboard();*/
             }
-            editor.putInt("folder", 3);
+            editor.putLong("_folder", -1);
             editor.apply();
         }
 
@@ -273,24 +285,24 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onPause() {
-        super.onPause();
+    protected void onStop() {
+        super.onStop();
         preferences = getSharedPreferences(pref_filename, MODE_PRIVATE);
         SharedPreferences.Editor editor = preferences.edit();
 
         if (selectedFragment == multiline
                 && !multiline.noteText.getText().toString().equals("")
                 && !multiline.titleText.getText().toString().equals("")) {
-            editor.putInt("folder", 1);
+            editor.putInt("__folder", multiline.position);
         } else if (selectedFragment == checkList && checkList.Notes.size() > 2 &&
                 (!((TitleCheckNotes) checkList.Notes.get(0)).titleText.equals("")
                         || ((CheckListItem) checkList.Notes.get(1)).checkBox
                         || !((CheckListItem) checkList.Notes.get(1)).noteText.equals("")
                         || checkList.Notes.size() > 3)) {
-            editor.putInt("folder", 1);
+            editor.putInt("__folder", checkList.position);
         } else if (selectedFragment == folderFragment) {
-            editor.putInt("folder", 2);
-        } else editor.putInt("folder", 3);
+            editor.putInt("__folder", -2);
+        } else editor.putInt("__folder", -1);
 
         editor.apply();
     }
@@ -300,7 +312,7 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
         preferences = getSharedPreferences(pref_filename, MODE_PRIVATE);
         SharedPreferences.Editor editor = preferences.edit();
-        editor.putInt("folder", 3);
+        editor.putLong("_folder", -1);
         editor.apply();
     }
 
@@ -526,10 +538,11 @@ public class MainActivity extends AppCompatActivity {
         return dateFormat.format(today);
     }
 
-    public void updateMultiline(MultilineText multilineText) {
+    public void updateMultiline(MultilineText multilineText, int position) {
         selectedTopFragment = TOP_LAYOUT_FRAGMENT;
         selectedBottomFragment = VOICE_FRAGMENT;
         multiline = new MultilineFragment(multilineText);
+        multiline.position = position;
         selectedFragment = multiline;
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.fragmentTopPlace, selectedTopFragment)
@@ -542,10 +555,11 @@ public class MainActivity extends AppCompatActivity {
             view.clearFocus();
     }
 
-    public void updateCheckList(CheckListText checkListText) {
+    public void updateCheckList(CheckListText checkListText, int position) {
         selectedTopFragment = TOP_LAYOUT_FRAGMENT;
         selectedBottomFragment = VOICE_FRAGMENT;
         checkList = new CheckListFragment(checkListText);
+        checkList.position = position;
         selectedFragment = checkList;
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.fragmentTopPlace, selectedTopFragment)
