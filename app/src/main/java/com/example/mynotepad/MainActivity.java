@@ -34,6 +34,7 @@ import com.example.mynotepad.databinding.FragmentMultilineBinding;
 import com.example.mynotepad.databinding.ItemChecklistNoteBinding;
 import com.example.mynotepad.databinding.ItemChecklistTitleBinding;
 import com.example.mynotepad.folder.FolderFragment;
+import com.example.mynotepad.folder.FolderItem;
 import com.example.mynotepad.multiline.MultilineDao;
 import com.example.mynotepad.multiline.MultilineFragment;
 import com.example.mynotepad.multiline.MultilineText;
@@ -70,12 +71,10 @@ public class MainActivity extends AppCompatActivity {
     FolderFragment folderFragment;
     VoiceFragment voiceFragment;
 
-    private final String pref_filename = "user_settings",
+    private final String
+            pref_filename = "user_settings",
             key_size_factor = "scale_factor",
-            key_title_size = "title_size",
-            key_note_size = "note_size",
-            key_folder_title_size = "folder_title_size",
-            key_folder_date_size = "key_folder_date_size";
+            keyBundle = "folder";
     SharedPreferences preferences;
     private ScaleGestureDetector mScaleDetector;
     public static float mScaleFactor;
@@ -144,16 +143,49 @@ public class MainActivity extends AppCompatActivity {
                     .replace(R.id.fragmentPlace, selectedFragment)
                     .commit();
             hideKeyboard();*/
-            selectedTopFragment = TOP_LAYOUT_FRAGMENT;
-            selectedBottomFragment = VOICE_FRAGMENT;
-            checkList = new CheckListFragment();
-            selectedFragment = checkList;
-            getSupportFragmentManager().beginTransaction()
-                    .replace(R.id.fragmentTopPlace, selectedTopFragment)
-                    .replace(R.id.fragmentBottomPlace, selectedBottomFragment)
-                    .replace(R.id.fragmentPlace, selectedFragment)
-                    .commit();
-            showKeyboard();
+
+            preferences = getSharedPreferences(pref_filename, MODE_PRIVATE);
+            SharedPreferences.Editor editor = preferences.edit();
+            if (preferences.getInt("folder", 3) == 2) {
+                selectedTopFragment = TOP_EMPTY_FRAGMENT;
+                selectedBottomFragment = BOTTOM_EMPTY_FRAGMENT;
+                folderFragment = new FolderFragment();
+                selectedFragment = folderFragment;
+                // organize with code block
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.fragmentTopPlace, selectedTopFragment)
+                        .replace(R.id.fragmentBottomPlace, selectedBottomFragment)
+                        .replace(R.id.fragmentPlace, selectedFragment)
+                        .commit();
+                hideKeyboard();
+            } else if (preferences.getInt("folder", 3) == 1) {
+                folderFragment = new FolderFragment();
+                FolderItem item = folderFragment.folders.get(0);
+                if (item.id_image == R.drawable.iconfoldermultiline) {
+                    AppDatabase db = App.getInstance().getDatabase();
+                    MultilineDao multilineDao = db.multilineDao();
+                    MultilineText multilineText = multilineDao.getById(item.id_db);
+                    updateMultiline(multilineText);
+                } else if (item.id_image == R.drawable.iconfolderchecklist) {
+                    AppDatabase db = App.getInstance().getDatabase();
+                    CheckListDao checkListDao = db.checkListDao();
+                    CheckListText checkListText = checkListDao.getById(item.id_db);
+                    updateCheckList(checkListText);
+                }
+            } else if (preferences.getInt("folder", 3) == 3) {
+                selectedTopFragment = TOP_LAYOUT_FRAGMENT;
+                selectedBottomFragment = VOICE_FRAGMENT;
+                checkList = new CheckListFragment();
+                selectedFragment = checkList;
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.fragmentTopPlace, selectedTopFragment)
+                        .replace(R.id.fragmentBottomPlace, selectedBottomFragment)
+                        .replace(R.id.fragmentPlace, selectedFragment)
+                        .commit();
+                showKeyboard();
+            }
+            editor.putInt("folder", 3);
+            editor.apply();
         }
 
         preferences = getSharedPreferences(pref_filename, MODE_PRIVATE);
@@ -219,7 +251,6 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onSaveInstanceState(@NonNull Bundle outState) {
-        super.onSaveInstanceState(outState);
         if (selectedFragment == multiline) {
             MultilineText multilineText = new MultilineText();
             multilineText.datetime = "";
@@ -238,7 +269,104 @@ public class MainActivity extends AppCompatActivity {
         if (selectedFragment == folderFragment) {
             outState.putChar("folder", '0');
         }
+        super.onSaveInstanceState(outState);
     }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        preferences = getSharedPreferences(pref_filename, MODE_PRIVATE);
+        SharedPreferences.Editor editor = preferences.edit();
+
+        if (selectedFragment == multiline
+                && !multiline.noteText.getText().toString().equals("")
+                && !multiline.titleText.getText().toString().equals("")) {
+            editor.putInt("folder", 1);
+        } else if (selectedFragment == checkList && checkList.Notes.size() > 2 &&
+                (!((TitleCheckNotes) checkList.Notes.get(0)).titleText.equals("")
+                        || ((CheckListItem) checkList.Notes.get(1)).checkBox
+                        || !((CheckListItem) checkList.Notes.get(1)).noteText.equals("")
+                        || checkList.Notes.size() > 3)) {
+            editor.putInt("folder", 1);
+        } else if (selectedFragment == folderFragment) {
+            editor.putInt("folder", 2);
+        } else editor.putInt("folder", 3);
+
+        editor.apply();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        preferences = getSharedPreferences(pref_filename, MODE_PRIVATE);
+        SharedPreferences.Editor editor = preferences.edit();
+        editor.putInt("folder", 3);
+        editor.apply();
+    }
+
+    /*@Override
+    protected void onRestoreInstanceState(@NonNull Bundle savedInstanceState) {
+        super.onRestoreInstanceState(savedInstanceState);
+        if (savedInstanceState != null) {
+            if (savedInstanceState.containsKey("folder")) {
+                selectedTopFragment = TOP_EMPTY_FRAGMENT;
+                selectedBottomFragment = BOTTOM_EMPTY_FRAGMENT;
+                folderFragment = new FolderFragment();
+                selectedFragment = folderFragment;
+                // organize with code block
+                getSupportFragmentManager().beginTransaction()
+                        .replace(R.id.fragmentTopPlace, selectedTopFragment)
+                        .replace(R.id.fragmentBottomPlace, selectedBottomFragment)
+                        .replace(R.id.fragmentPlace, selectedFragment)
+                        .commit();
+                hideKeyboard();
+            } else {
+                selectedTopFragment = TOP_LAYOUT_FRAGMENT;
+                selectedBottomFragment = VOICE_FRAGMENT;
+                if (savedInstanceState.containsKey("multiline")) {
+                    multiline = new MultilineFragment((MultilineText) Objects.requireNonNull(savedInstanceState.getSerializable("multiline")));
+                    selectedFragment = multiline;
+                    getSupportFragmentManager().beginTransaction()
+                            .replace(R.id.fragmentTopPlace, selectedTopFragment)
+                            .replace(R.id.fragmentBottomPlace, selectedBottomFragment)
+                            .replace(R.id.fragmentPlace, selectedFragment)
+                            .commit();
+                    showKeyboard();
+                } else if (savedInstanceState.containsKey("checklist")) {
+                    checkList = new CheckListFragment((CheckListText) Objects.requireNonNull(savedInstanceState.getSerializable("checklist")));
+                    selectedFragment = checkList;
+                    getSupportFragmentManager().beginTransaction()
+                            .replace(R.id.fragmentTopPlace, selectedTopFragment)
+                            .replace(R.id.fragmentBottomPlace, selectedBottomFragment)
+                            .replace(R.id.fragmentPlace, selectedFragment)
+                            .commit();
+                    showKeyboard();
+                }
+            }
+        } else {
+            *//*selectedTopFragment = TOP_EMPTY_FRAGMENT;
+            selectedBottomFragment = BOTTOM_EMPTY_FRAGMENT;
+            folderFragment = new FolderFragment();
+            selectedFragment = folderFragment;
+            // organize with code block
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fragmentTopPlace, selectedTopFragment)
+                    .replace(R.id.fragmentBottomPlace, selectedBottomFragment)
+                    .replace(R.id.fragmentPlace, selectedFragment)
+                    .commit();
+            hideKeyboard();*//*
+            selectedTopFragment = TOP_LAYOUT_FRAGMENT;
+            selectedBottomFragment = VOICE_FRAGMENT;
+            checkList = new CheckListFragment();
+            selectedFragment = checkList;
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fragmentTopPlace, selectedTopFragment)
+                    .replace(R.id.fragmentBottomPlace, selectedBottomFragment)
+                    .replace(R.id.fragmentPlace, selectedFragment)
+                    .commit();
+            showKeyboard();
+        }
+    }*/
 
     private final BottomNavigationView.OnItemSelectedListener navListener = this::onNavigationItemSelected;
 
