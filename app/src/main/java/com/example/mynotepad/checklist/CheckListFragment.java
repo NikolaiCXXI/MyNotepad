@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.provider.ContactsContract;
 import android.speech.RecognizerIntent;
@@ -30,10 +31,22 @@ import com.example.mynotepad.checklist_row_type.TitleCheckNotes;
 import com.example.mynotepad.databinding.FragmentChecklistBinding;
 import com.example.mynotepad.multiline.MultilineDao;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.TimeZone;
+import java.util.logging.Logger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultCallback;
@@ -41,6 +54,7 @@ import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.DiffUtil;
@@ -245,8 +259,7 @@ public class CheckListFragment extends Fragment implements RecyclerViewClickList
                 EditText noteCheckList = ((CheckNotesAdapter.CheckListViewHolder) Objects.requireNonNull(notesList.findViewHolderForAdapterPosition(position))).checkListItemBinding.noteCheckList;
                 noteCheckList.requestFocus();
                 noteCheckList.setSelection(noteCheckList.getText().length());
-            }
-            else if (position >= Notes.size() - 1) {
+            } else if (position >= Notes.size() - 1) {
                 notesList.scrollToPosition(position - 1);
                 addCheckNote();
                 EditText noteCheckList = ((CheckNotesAdapter.CheckListViewHolder) Objects.requireNonNull(notesList.findViewHolderForAdapterPosition(position - 1))).checkListItemBinding.noteCheckList;
@@ -290,6 +303,7 @@ public class CheckListFragment extends Fragment implements RecyclerViewClickList
             List<String> results = result.getData().getStringArrayListExtra(
                     RecognizerIntent.EXTRA_RESULTS);
             String spokenText = results.get(0);
+            spokenText = textToReminder(spokenText);
 
             int k = checkNotesAdapter.getItemViewType(checkNotesAdapter.clickedPosition);
             switch (k) {
@@ -306,6 +320,43 @@ public class CheckListFragment extends Fragment implements RecyclerViewClickList
             }
         }
     }
+
+    public String textToReminder(String text) {
+        return ((MainActivity) requireActivity()).textToReminder(text);
+    }
+    /*public String textToReminder(String text) {
+        String[] result = {"", ""};
+
+        Pattern pattern = Pattern.compile("(0?[1-9]|[12][0-9]|3[01])\\s[а-я]+\\s[в]\\s[0-2]?[0-9][:][0-5]?[0-9]");
+        Matcher matcher = pattern.matcher(text);
+        if (matcher.find()) {
+            int start = matcher.start();
+            int end = matcher.end();
+            result[0] = text.substring(start, end);
+            result[1] = matcher.replaceFirst("");
+            result[1] = result[1].replace("  ", "\n");
+        } else return text;
+
+        try {
+            DateTimeFormatter formatter = null;
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                formatter = new DateTimeFormatterBuilder()
+                        .appendPattern("d MMMM в H:m")
+                        .parseDefaulting(ChronoField.YEAR, Calendar.getInstance().get(Calendar.YEAR))
+                        .toFormatter(Locale.forLanguageTag("ru-RU"));
+            }
+            LocalDateTime dateTime;
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                dateTime = LocalDateTime.parse(result[0], formatter);
+                if (dateTime.isBefore(LocalDateTime.now(ZoneId.systemDefault())))
+                    dateTime = dateTime.plusYears(1);
+                result[0] = dateTime.format(DateTimeFormatter.ofPattern("dd.MM.yy HH:mm"));
+            }
+        } catch (Exception e) {
+            return text;
+        }
+        return result[0] + "\n" + result[1].trim();
+    }*/
 
     void addCheckNote() {
         checkListItem = new CheckListItem();

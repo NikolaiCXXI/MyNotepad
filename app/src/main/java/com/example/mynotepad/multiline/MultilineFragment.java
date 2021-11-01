@@ -17,8 +17,17 @@ import com.example.mynotepad.MainActivity;
 import com.example.mynotepad.checklist.CheckNotesAdapter;
 import com.example.mynotepad.databinding.FragmentMultilineBinding;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
+import java.util.Calendar;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import androidx.activity.result.ActivityResult;
 import androidx.annotation.NonNull;
@@ -130,7 +139,7 @@ public class MultilineFragment extends Fragment {
         if (result.getResultCode() == RESULT_OK) {
             List<String> results = result.getData().getStringArrayListExtra(
                     RecognizerIntent.EXTRA_RESULTS);
-            String spokenText = results.get(0);
+            String spokenText = ((MainActivity) requireActivity()).textToReminder(results.get(0));
 
             if (titleText.hasFocus()) {
                 titleText.append(spokenText);
@@ -139,6 +148,40 @@ public class MultilineFragment extends Fragment {
             }
         }
     }
+
+    /*public String textToReminder(String text) {
+        String[] result = {"", ""};
+
+        Pattern pattern = Pattern.compile("(0?[1-9]|[12][0-9]|3[01])\\s[а-я]+\\s[в]\\s[0-2]?[0-9][:][0-5]?[0-9]");
+        Matcher matcher = pattern.matcher(text);
+        if (matcher.find()) {
+            int start = matcher.start();
+            int end = matcher.end();
+            result[0] = text.substring(start, end);
+            result[1] = matcher.replaceFirst("");
+            result[1] = result[1].replace("  ", "\n");
+        } else return text;
+
+        try {
+            DateTimeFormatter formatter = null;
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                formatter = new DateTimeFormatterBuilder()
+                        .appendPattern("d MMMM в H:m")
+                        .parseDefaulting(ChronoField.YEAR, Calendar.getInstance().get(Calendar.YEAR))
+                        .toFormatter(Locale.forLanguageTag("ru-RU"));
+            }
+            LocalDateTime dateTime;
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                dateTime = LocalDateTime.parse(result[0], formatter);
+                if (dateTime.isBefore(LocalDateTime.now(ZoneId.systemDefault())))
+                    dateTime = dateTime.plusYears(1);
+                result[0] = dateTime.format(DateTimeFormatter.ofPattern("dd.MM.yy HH:mm"));
+            }
+        } catch (Exception e) {
+            return text;
+        }
+        return result[0] + "\n" + result[1].trim();
+    }*/
 
     /*@Override
     public void onStop() {

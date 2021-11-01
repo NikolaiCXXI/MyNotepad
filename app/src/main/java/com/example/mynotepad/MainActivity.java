@@ -1,11 +1,18 @@
 package com.example.mynotepad;
 
 import android.app.Activity;
+import android.content.ContentResolver;
+import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.database.Cursor;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.provider.CalendarContract;
 import android.speech.RecognizerIntent;
+import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MenuItem;
 import android.view.MotionEvent;
@@ -33,17 +40,25 @@ import com.example.mynotepad.multiline.MultilineText;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.TimeZone;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import androidx.activity.result.ActivityResult;
 import androidx.activity.result.ActivityResultCallback;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.Fragment;
 
@@ -117,11 +132,18 @@ public class MainActivity extends AppCompatActivity {
                     showKeyboard();
                 }
             }
-        } else{
-            /*selectedTopFragment = EMPTY_FRAGMENT;
-            getSupportFragmentManager().beginTransaction().replace(R.id.fragmentTopPlace, selectedTopFragment).commit();
+        } else {
+            /*selectedTopFragment = TOP_EMPTY_FRAGMENT;
+            selectedBottomFragment = BOTTOM_EMPTY_FRAGMENT;
             folderFragment = new FolderFragment();
-            selectedFragment = folderFragment;*/
+            selectedFragment = folderFragment;
+            // organize with code block
+            getSupportFragmentManager().beginTransaction()
+                    .replace(R.id.fragmentTopPlace, selectedTopFragment)
+                    .replace(R.id.fragmentBottomPlace, selectedBottomFragment)
+                    .replace(R.id.fragmentPlace, selectedFragment)
+                    .commit();
+            hideKeyboard();*/
             selectedTopFragment = TOP_LAYOUT_FRAGMENT;
             selectedBottomFragment = VOICE_FRAGMENT;
             checkList = new CheckListFragment();
@@ -281,8 +303,8 @@ public class MainActivity extends AppCompatActivity {
             if ((!multiline.noteText.getText().toString().equals("") || !multiline.titleText.getText().toString().equals(""))) {
                 MultilineText multilineText = new MultilineText();
                 multilineText.datetime = getCurrentDate();
-                multilineText.noteText = multiline.noteText.getText().toString();
-                multilineText.titleText = multiline.titleText.getText().toString();
+                multilineText.noteText = textToReminder(multiline.noteText.getText().toString());
+                multilineText.titleText = textToReminder(multiline.titleText.getText().toString());
                 AppDatabase db = App.getInstance().getDatabase();
                 MultilineDao multilineDao = db.multilineDao();
                 if (multiline.id_db != 0) {
@@ -421,6 +443,53 @@ public class MainActivity extends AppCompatActivity {
             InputMethodManager inputMethodManager = (InputMethodManager) getSystemService(Activity.INPUT_METHOD_SERVICE);
             inputMethodManager.hideSoftInputFromWindow(getCurrentFocus().getWindowToken(), 0);
         }
+    }
+
+    public String textToReminder(String text) {
+        String[] result = {"", ""};
+
+        Pattern pattern = Pattern.compile("(0?[1-9]|[12][0-9]|3[01])\\s[а-я]+\\s[в]\\s[0-2]?[0-9][:][0-5]?[0-9]");
+        Matcher matcher = pattern.matcher(text);
+        if (matcher.find()) {
+            int start = matcher.start();
+            int end = matcher.end();
+            result[0] = text.substring(start, end);
+            result[1] = matcher.replaceFirst("");
+            result[1] = result[1].replace("  ", "\n");
+        } else return text;
+
+        try {
+            DateTimeFormatter formatter = null;
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                formatter = new DateTimeFormatterBuilder()
+                        .appendPattern("d MMMM в H:m")
+                        .parseDefaulting(ChronoField.YEAR, Calendar.getInstance().get(Calendar.YEAR))
+                        .toFormatter(Locale.forLanguageTag("ru-RU"));
+            }
+            LocalDateTime dateTime;
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                dateTime = LocalDateTime.parse(result[0], formatter);
+                if (dateTime.isBefore(LocalDateTime.now(ZoneId.systemDefault())))
+                    dateTime = dateTime.plusYears(1);
+                result[0] = dateTime.format(DateTimeFormatter.ofPattern("dd.MM.yy HH:mm"));
+                putReminderToCalendar(dateTime, result[1]);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return text;
+        }
+        return result[0] + "\n" + result[1].trim();
+    }
+
+    @RequiresApi(api = Build.VERSION_CODES.O)
+    public void putReminderToCalendar(LocalDateTime dateTime, String body) {
+        Intent intent = new Intent(Intent.ACTION_INSERT)
+                .setData(CalendarContract.Events.CONTENT_URI)
+                .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, dateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli())
+                .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, dateTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli() + 15 * 60 * 1000)
+                .putExtra(CalendarContract.Events.TITLE, body)
+                .putExtra(CalendarContract.Events.DESCRIPTION, body);
+        startActivity(intent);
     }
 
     @Override

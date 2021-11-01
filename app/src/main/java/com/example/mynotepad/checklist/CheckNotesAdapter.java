@@ -1,6 +1,7 @@
 package com.example.mynotepad.checklist;
 
 import android.content.Context;
+import android.os.Build;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -90,6 +91,11 @@ public class CheckNotesAdapter extends ListAdapter<CheckListFragment, RecyclerVi
                 ((TitleViewHolder) holder).titleChecklistBinding.titleTextCheckList.setOnFocusChangeListener((view, b) -> {
                     if (view.hasFocus())
                         clickedPosition = position;
+                    else {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            ((TitleViewHolder) holder).titleChecklistBinding.titleTextCheckList.setText(checkList.textToReminder(((TitleViewHolder) holder).titleChecklistBinding.titleTextCheckList.getText().toString()));
+                        }
+                    }
                 });
                 break;
             case RowType.CHECKLIST_ROW_TYPE:
@@ -97,6 +103,11 @@ public class CheckNotesAdapter extends ListAdapter<CheckListFragment, RecyclerVi
                 ((CheckListViewHolder) holder).checkListItemBinding.noteCheckList.setOnFocusChangeListener((view, b) -> {
                     if (view.hasFocus())
                         clickedPosition = position;
+                    else {
+                        ((CheckListViewHolder) holder).checkListItemBinding.noteCheckList.setText(checkList.textToReminder(
+                                ((CheckListViewHolder) holder).checkListItemBinding.noteCheckList.getText().toString()
+                        ));
+                    }
                 });
                 ((CheckListViewHolder) holder).checkListItemBinding.checkBoxItem.setOnClickListener((view) -> clickedPosition = position);
                 if ((position == 1
